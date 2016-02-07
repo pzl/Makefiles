@@ -1,51 +1,83 @@
 GNU ?= arm-none-eabi
 
-CPU=cortex-m3
 
-TARGET=myfile
-SRCS=main.c
+#cortex-m0
+#cortex-m3
+#cortex-m4
+CPU=
 
-COPS = -Wall -Werror -O2 -nostdlib -nostartfiles -ffreestanding
-#COPS +=-g -mthumb -mcpu=$(CPU) -stc=c99 -pedantic
-LOPS = -T memmap
+TARGET=myproject
+VERSION=0.0.1
+
+
+
+SRCDIR=src
+OBJDIR=build
+
+
+CC ?= gcc
+
+CFLAGS += -Wall -Wextra -Werror -O2
+CFLAGS += -nostdlib -nostartfiles -ffreestanding -fno-common
+CFLAGS += -Wfloat-equal -Wundef -Wshadow -Wpointer-arith -Wcast-align
+CFLAGS += -Wstrict-prototypes -Wwrite-strings -Wpadded
+CFLAGS += -mthumb -mcpu=$(CPU)
+CFLAGS += -DVERSION=\"$(VERSION)\"
+SFLAGS = -std=c89 -pedantic
+LFLAGS = -Map=$(TARGET).map -T$(TARGET).ld
+AFLAGS = -mcpu=$(CPU)
 #AOPS = --warn --fatal-warnings
+INCLUDES= -I.
 
-OBJS=$(SRCS:.c=.o)
-AOBJS=$(SRCS:.s=.o)
+
+
+
+
+SRCS_C=$(wildcard $(SRCDIR)/*.c)
+SRCS_S=$(wildcard $(SRCDIR)/*.s)
+OBJS_C=$(SRCS:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
+OBJS_S=$(SRCS:$(SRCDIR)/%.s=$(OBJDIR)/%.o)
 
 
 all: $(TARGET).hex $(TARGET).bin $(TARGET).elf
+
+
+#recompile when makefile changes
+$(OBJS_C): Makefile
+
+#create build dir if it doesn't exist
+dummy := $(shell test -d $(OBJDIR) || mkdir -p $(OBJDIR))
+
 
 
 
 
 #bin and hex variants
 $(TARGET).bin: $(TARGET).elf
-	$(GNU)-objcopy $< -O binary $@
+	$(GNU)-objcopy $< -O binary -j .text -j .data $@
 $(TARGET).hex: $(TARGET).elf
-	$(GNU)-objcopy $< -O ihex $@
+	$(GNU)-objcopy $< -O ihex -R .stack $@
 
 
 #link and create ELF
-$(TARGET).elf: $(OBJS)
-	$(GNU)-ld $< $(LOPS) -o $@
+$(TARGET).elf: $(OBJS_C) $(OBJS_S)
+	$(GNU)-ld $< $(LFLAGS) $(SFLAGS) $(CFLAGS) -o $@
 	#$(GNU)-objdump -D $(TARGET).elf > $(TARGET).list
 
 #compile all asm sources
 .s.o:
-	$(GNU)-as -o $@ $<
+	$(GNU)-as $(AFLAGS) -o $@ $<
 #compile all c sources
 .c.o:
-	$(GNU)-gcc $(COPS) -c -o $@ $<
+	$(GNU)-$(CC) $(CFLAGS) $(SFLAGS) $(INCLUDES) -c -o $@ $<
 
 
 clean:
-	$(RM) *.o
-	$(RM) *.bin
-	$(RM) *.hex
-	$(RM) *.elf
-	$(RM) *.list
-	$(RM) *.img
+	$(RM) $(OBJDIR)/$(OBJ_C)
+	$(RM) $(OBJDIR)/$(OBJ_S)
+	$(RM) $(TARGET).bin $(TARGET).hex $(TARGET).elf
+	#$(RM) *.list
+	#$(RM) *.img
 
 
-.PHONY: all clean
+.PHONY: all clean dummy flash
