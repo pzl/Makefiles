@@ -1,13 +1,11 @@
 GNU = avr
 
-
-DEVICE=attiny-2313 
+DEVICE=attiny85
 PROGRAMMER=avrdude
 BOARD=stk500v2
-PORT=/dev/ttyS1
+PORT=/dev/ttyS2
 
-
-TARGET=myfile
+TARGET=bin
 SRCS = main.c
 
 
@@ -24,12 +22,13 @@ all: $(TARGET).hex
 
 #convert to hex for flashing
 $(TARGET).hex: $(TARGET).elf
-	$(GNU)-objcopy -j .text -O ihex $< $@
+	$(GNU)-objcopy -j .text -j .data -O ihex $< $@
 	#$(GNU)-objcopy -O ihex -R .eeprom $< $@
 
 #linking and making an elf?
 $(TARGET).elf: $(OBJS)
-	$(GNU)-ld $(OBJS) $(LOPS) -o $@
+	$(GNU)-gcc $(OBJS) $(LOPS) -o $@
+	#$(GNU)-ld $(OBJS) $(LOPS) -o $@
 
 #compile all the c sources
 .c.o:
@@ -44,10 +43,13 @@ flash: $(TARGET).hex
 verify: $(TARGET).hex
 	$(PROGRAMMER) $(POPS) -U flash:v:$<
 
+size: $(TARGET).elf
+	$(GNU)-size --mcu=$(DEVICE) -C $<
+
 clean:
 	$(RM) *.o
 	$(RM) *.elf
 	$(RM) *.map
 	$(RM) *.hex
 
-.PHONY: all flash verify clean
+.PHONY: all flash verify clean size
