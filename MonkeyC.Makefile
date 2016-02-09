@@ -14,7 +14,8 @@ NAME=ActivityTracking
 DEVICE ?= square_watch
 
 # Point this to wherever your SDK is installed
-SDK = ~/dev/connectiq/connectiq-sdk-mac-1.2.4/bin
+SDK = ~/dev/connectiq/connectiq-sdk-mac-1.2.4/bin #we use the compiler from here. Don't really have to
+WIN_SDK = ~/dev/connectiq/connectiq-sdk-win-1.2.4/bin #monkeydo must be converted to unix line endings, and edited to point to shell.exe and run it under wine
 
 # These should point to the directories containing your .mc files, .xml, and final output files respectively
 SOURCE_DIR ?= source
@@ -71,4 +72,10 @@ clean:
 	$(RM) $(PRG) $(IQ) $(NAME).prg.debug.xml
 	$(RM) -rf $(BUILD_DIR)
 
-.PHONY: all debug release export clean
+
+simulate: $(PRG)
+	WINEPREFIX=~/dev/connectiq/.wine wine $(WIN_SDK)/simulator.exe &
+	sleep 2
+	WINEPREFIX=~/dev/connectiq/.wine $(WIN_SDK)/monkeydo $(PRG)
+
+.PHONY: all debug release export clean simulate
